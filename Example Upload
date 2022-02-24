@@ -1,0 +1,13 @@
+// This is an example of how you can upload code
+
+#include <FEHIO.h>
+#include <FEHMotor.h>
+
+FEHMotor leftIgwan(FEHMotor::Motor1, 9);
+FEHMotor rightIgwan(FEHMotor::Motor0, 9);
+
+int main(void)
+{
+  leftIgwan.SetPercent(-25);
+  rightIgwan.SetPercent(-25);
+}
