@@ -1,4 +1,3 @@
-
 #include <FEHLCD.h>
 #include <FEHServo.h>
 #include <FEHMotor.h>
@@ -73,7 +72,7 @@ void move_forward(int percent, int counts) //using encoders
 
     //Set both motors to desired percent
     right_motor.SetPercent(percent);
-    left_motor.SetPercent(-percent);
+    left_motor.SetPercent(-(percent+2));
 
     //While the average of the left and right encoder is less than counts,
     //keep running motors
@@ -109,7 +108,7 @@ void move_backward(int percent, int counts) //using encoders
     left_encoder.ResetCounts();
 
     //Set both motors to desired percent
-    right_motor.SetPercent(-percent);
+    right_motor.SetPercent(-percent-2);
     left_motor.SetPercent(percent);
 
     //While the average of the left and right encoder is less than counts,
@@ -300,43 +299,48 @@ int main(void)
 */
 
 /* conversion between inches traveled and number of transitions for shaft encoder:
-
 n = (inches*318)/(2*pi*r)
-
 (put the "n" value into the code)
-
 */
 
+
+
+while (true){
+   float a = lightValue();
+   LCD.WriteLine(a);
+
+if (a<.45){
 move_forward(25,850);
 Sleep(0.5);
 turn_left(25,723);
 Sleep(0.5);
-move_backward(25,132);
+move_backward(25,129);
 Sleep(0.5);
 
-float a = lightValue();
 LCD.WriteLine(a);
 move_forward(25,240);
 Sleep(0.5);
 
 if(a>=.150&&a<=.350){
-    turn_left(25,35);
     LCD.WriteLine("Red");
+    turn_left(25,35);
     Sleep(0.5);
     move_forward(35,55);
     reverse_after_red(25);
 }
 else if (a>=.380&&a<=.860){
+    LCD.WriteLine("Blue");
     turn_right(25,35);
-     LCD.WriteLine("Blue");
-     Sleep(0.5);
+    Sleep(0.5);
     move_forward(35,55);
-     reverse_after_blue(25);
+    reverse_after_blue(25);
 }
 
 move_backward(25,500);
 turn_right(25,485);
-move_forward_ramp(40,45,1134);
+move_forward_ramp(40,46,1134);
 move_backward_ramp(20,22,1134);
+}
+}
 
 }
