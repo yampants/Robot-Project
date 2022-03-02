@@ -5,6 +5,11 @@
 #include <FEHUtility.h>
 #include <FEHIO.h>
 
+FEHServo servo(FEHServo::Servo7);
+
+// servo Min: 500. max: 2451
+
+
 //Declare 2 igwan motors to motor ports
 FEHMotor left_motor(FEHMotor::Motor0,9.0);  
 FEHMotor right_motor(FEHMotor::Motor1,9.0);  
