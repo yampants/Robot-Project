@@ -5,10 +5,7 @@
 #include <FEHUtility.h>
 #include <FEHIO.h>
 
-FEHServo servo(FEHServo::Servo7);
-
-// servo Min: 500. max: 2451
-
+#define red .46
 
 //Declare 2 igwan motors to motor ports
 FEHMotor left_motor(FEHMotor::Motor0,9.0);  
@@ -16,51 +13,70 @@ FEHMotor right_motor(FEHMotor::Motor1,9.0);
 DigitalEncoder right_encoder(FEHIO::P1_0);
 DigitalEncoder left_encoder(FEHIO::P1_1);
 
+//Declares the arm servos
+FEHServo kickServo(FEHServo::Servo7);
+FEHServo arm(FEHServo::Servo0);
+FEHServo lever(FEHServo::Servo1);
+
+//Declares bump switches
+DigitalInputPin FL(FEHIO::P3_0);
+DigitalInputPin FR(FEHIO::P0_0);
+
 //Function that calculates average voltage value of CDS cell 0-3.3 V
-float lightValue()
-{
+float lightValue(){
     //Declare input to cds cell
-    AnalogInputPin cds(FEHIO::P2_0);
-    int i = 0;
-    float sum = 0;
-    float a = 0;
-    float average = 0;
-    //Loop runs through 10 times to measure cds cell output
-    while(i < 10)
-    {
-        //Find value and add it to running sum
-        a = cds.Value();
-        sum = sum + a;
-        i++;
+AnalogInputPin cds(FEHIO::P2_0);
+int i=0;
+float sum=0;
+float a=0;
+float average=0;
+//Loop runs through 10 times to measure cds cell output
+while(i<10){
+    //Find value and add it to running sum
+     a= cds.Value();
+     sum=sum+a;
+     i++;
+     //Sleep 10 ms
+     Sleep(10);
+  
 
-        //Sleep 10 ms
-        Sleep(10);
-    }
 
-    //calculate average value and return said value
-    average = sum/10;
-    return average;
+}
+//calculate average value and return said value
+
+average=sum/10;
+return average;
 
 }
 
-void forward()
-{
+void forward(){ 
+    
    left_motor.SetPercent(-25);
    right_motor.SetPercent(25);
-}
 
-void turnLeft()
-{ 
+
+}
+void turnLeft(){ 
+    
    left_motor.SetPercent(0);
+
    right_motor.SetPercent(25);
+
+
+
+
+
 }
 
-void turnRight()
-{
+void turnRight(){ 
+
+    
+
    left_motor.SetPercent(-25);
    right_motor.SetPercent(0);
-}
 
+
+}
 void move_forward(int percent, int counts) //using encoders
 {
     //Reset encoder counts
@@ -69,7 +85,8 @@ void move_forward(int percent, int counts) //using encoders
 
     //Set both motors to desired percent
     right_motor.SetPercent(percent);
-    left_motor.SetPercent(-percent);
+    left_motor.SetPercent(-(percent+3));
+
     //While the average of the left and right encoder is less than counts,
     //keep running motors
     while((left_encoder.Counts() + right_encoder.Counts()) / 2. < counts);
@@ -78,7 +95,6 @@ void move_forward(int percent, int counts) //using encoders
     right_motor.Stop();
     left_motor.Stop();
 }
-
 void move_forward_ramp(int percent1, int percent2, int counts) //using encoders
 {
     //Reset encoder counts
@@ -88,6 +104,7 @@ void move_forward_ramp(int percent1, int percent2, int counts) //using encoders
     //Set both motors to desired percent
     right_motor.SetPercent(percent1);
     left_motor.SetPercent(-percent2);
+
     //While the average of the left and right encoder is less than counts,
     //keep running motors
     while((left_encoder.Counts() + right_encoder.Counts()) / 2. < counts);
@@ -104,8 +121,9 @@ void move_backward(int percent, int counts) //using encoders
     left_encoder.ResetCounts();
 
     //Set both motors to desired percent
-    right_motor.SetPercent(-percent);
+    right_motor.SetPercent(-percent-3);
     left_motor.SetPercent(percent);
+
     //While the average of the left and right encoder is less than counts,
     //keep running motors
     while((left_encoder.Counts() + right_encoder.Counts()) / 2. < counts);
@@ -114,7 +132,6 @@ void move_backward(int percent, int counts) //using encoders
     right_motor.Stop();
     left_motor.Stop();
 }
-
 void move_backward_ramp(int percent1, int percent2, int counts) //using encoders
 {
     //Reset encoder counts
@@ -124,6 +141,7 @@ void move_backward_ramp(int percent1, int percent2, int counts) //using encoders
     //Set both motors to desired percent
     right_motor.SetPercent(-percent1);
     left_motor.SetPercent(percent2);
+
     //While the average of the left and right encoder is less than counts,
     //keep running motors
     while((left_encoder.Counts() + right_encoder.Counts()) / 2. < counts);
@@ -144,14 +162,28 @@ void turn_left(int percent, int counts)
     //While the average of the left and right encoder is less than counts,
     //keep running motors
     while(right_encoder.Counts() < counts);
-
     //Turn off motors
     right_motor.Stop();
-}
 
+}
+void turn_left_backward(int percent, int counts)
+{
+     //Reset encoder counts
+    right_encoder.ResetCounts();
+    left_encoder.ResetCounts();
+
+    //Set both motors to desired percent
+    right_motor.SetPercent(-percent);
+    //While the average of the left and right encoder is less than counts,
+    //keep running motors
+    while(right_encoder.Counts() < counts);
+    //Turn off motors
+    right_motor.Stop();
+
+}
 void turn_right(int percent, int counts)
 {
-    //Reset encoder counts
+     //Reset encoder counts
     right_encoder.ResetCounts();
     left_encoder.ResetCounts();
 
@@ -163,6 +195,23 @@ void turn_right(int percent, int counts)
 
     //Turn off motors
     left_motor.Stop();
+
+}
+void turn_right_backward(int percent, int counts)
+{
+     //Reset encoder counts
+    right_encoder.ResetCounts();
+    left_encoder.ResetCounts();
+
+    //Set both motors to desired percent
+    left_motor.SetPercent(percent);
+    //While the average of the left and right encoder is less than counts,
+    //keep running motors
+    while(left_encoder.Counts() < counts);
+
+    //Turn off motors
+    left_motor.Stop();
+
 }
 
 void reverse_after_red(int percent)
@@ -277,8 +326,143 @@ void reverse_after_blue(int percent)
 
     //Turn off motors
     left_motor.Stop();
+
 }
 
+void move_toward_jukebox (int a){
+    move_forward(25,850);
+    Sleep(0.5);
+    turn_left(25,723);
+    Sleep(0.5);
+    move_backward(25,129);
+    Sleep(0.5);
+
+    LCD.WriteLine(a);
+    move_forward(25,240);
+    Sleep(0.5);
+}
+
+void servo_kick(float degree){
+    kickServo.SetMin(630);
+    kickServo.SetMax(2400);
+
+    kickServo.SetDegree(degree);
+
+    Sleep(0.5);
+}
+
+void servo_arm(float degree){
+    arm.SetMin(800);
+    arm.SetMax(2314);
+
+    arm.SetDegree(degree);
+
+    Sleep(0.5);
+}
+void servo_lever(float degree){
+    lever.SetMin(550);
+    lever.SetMax(2484);
+
+    lever.SetDegree(degree);
+
+    Sleep(0.5);
+}
+
+void L_servo(float degree){
+    arm.SetMin(900);
+    arm.SetMax(2000);
+
+    arm.SetDegree(degree);
+
+    Sleep(0.5);
+}
+
+void tray(){
+    move_forward(25, 700);
+    Sleep(0.5);
+    turn_right(30, 240);
+    Sleep(0.5);
+    move_backward(25,50);
+    Sleep(.5);
+    move_forward_ramp(40,45,1250);
+    Sleep(0.5);
+    move_forward(25,250);
+    Sleep(0.5);
+    turn_left(25,990);
+    Sleep(0.5);
+    turn_right(25,100);
+    move_forward(25,50);
+    turn_left(25,100);
+
+    servo_kick(180);
+    servo_arm(90);
+    while (FL.Value()||FR.Value()){
+    move_forward(25,50);
+    }
+    right_motor.Stop();
+    left_motor.Stop();
+    Sleep(0.5);
+    servo_kick(90);
+    Sleep(0.5);
+}
+
+void reverse_tray(){
+    move_backward(25, 400);
+    turn_left(25, 520);
+
+    while (FL.Value()||FR.Value()){
+        move_forward(25,50);
+    }
+}
+
+void turn_ticket(){
+    move_backward(25,175);
+    turn_left(25,550); //535
+    servo_arm(9);
+    move_backward_ramp(20, 22, 680);
+    turn_right(30,300);
+    move_forward(20,50);
+    turn_left(30,350);
+    while (FL.Value()){
+        move_forward(25,50);
+    }
+}
+
+void burger(){
+    move_forward(25, 715);
+    Sleep(0.5);
+    turn_right(30, 210);
+    Sleep(0.5);
+    move_backward(25,50);
+    Sleep(.5);
+    move_forward_ramp(40,45,1250);
+    Sleep(0.5);
+    servo_arm(180);
+    Sleep(0.5);
+    L_servo(90);
+    Sleep(0.5);
+    turn_right(25,460);
+    Sleep(0.5);
+    while (FL.Value()||FR.Value()){
+        move_forward(25,25);
+    }
+    move_backward(25,205);
+    Sleep(0.5);
+    turn_right(25,450);
+    Sleep(0.5);
+     servo_arm(0);
+     servo_lever(80);
+   
+    move_backward_ramp(25, 26,400);
+ servo_arm(75);
+    
+    turn_right(25, 600);
+    move_forward(25,360);
+    servo_kick(180);
+    
+   
+    
+}
 
 int main(void)
 {
@@ -289,48 +473,48 @@ int main(void)
         a = lightValue();
         LCD.WriteLine(a);        
     }
-    */
+*/
+/* conversion between inches traveled and number of transitions for shaft encoder:
+n = (inches*318)/(2*pi*r)
+(put the "n" value into the code)
 
-    /* conversion between inches traveled and number of transitions for shaft encoder:
+446 counts to turn 90 degrees
+*/
+while (true){
+  float a = lightValue();
+   LCD.WriteLine(a);
 
-    n = (inches*318)/(2*pi*r)
+if (a < red){
+//move_toward_jukebox(a);
 
-    (put the "n" value into the code)
-
-    */
-
-    move_forward(25,850);
+/*
+if(a>=.150&&a<=.340){
+    LCD.WriteLine("Red");
+    turn_left(25,35);
     Sleep(0.5);
-    turn_left(25,723);
+    move_forward(35,55);
+    reverse_after_red(25);
+}
+else if (a>=.370&&a<=.860){
+    LCD.WriteLine("Blue");
+    turn_right(25,35);
     Sleep(0.5);
-    move_backward(25,132);
-    Sleep(0.5);
+    move_forward(35,55);
+    reverse_after_blue(25);
+}
+*/
+//move_backward(25,500);
+//turn_right(25,485);
 
-    float a = lightValue();
-    LCD.WriteLine(a);
-    move_forward(25,240);
-    Sleep(0.5);
+//tray();
+//reverse_tray();
+//turn_ticket();
 
-    if (a >= .150 && a <= .350)
-    {
-        turn_left(25,35);
-        LCD.WriteLine("Red");
-        Sleep(0.5);
-        move_forward(35,55);
-        reverse_after_red(25);
-    }
 
-    else if (a >= .380 && a <= .860)
-    {
-        turn_right(25,35);
-        LCD.WriteLine("Blue");
-        Sleep(0.5);
-        move_forward(35,55);
-        reverse_after_blue(25);
-    }
+burger();
 
-    move_backward(25,500);
-    turn_right(25,485);
-    move_forward_ramp(40,45,1134);
-    move_backward_ramp(20,22,1134);
+//break;
+}
+}
+
 }
