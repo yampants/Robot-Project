@@ -429,36 +429,46 @@ void turn_ticket(){
 }
 
 void burger(){
-    move_forward(25, 715);
+    move_forward(25, 115);
     Sleep(0.5);
-    turn_right(30, 210);
+    turn_left(25,50);
+    Sleep(0.5);
+    move_forward(25, 560);
+    Sleep(0.5);
+    turn_right(30, 220);
     Sleep(0.5);
     move_backward(25,50);
     Sleep(.5);
-    move_forward_ramp(40,45,1250);
+    move_forward_ramp(40,45,1290);
     Sleep(0.5);
     servo_arm(180);
-    Sleep(0.5);
     L_servo(90);
     Sleep(0.5);
-    turn_right(25,460);
+    turn_right(25,450);
     Sleep(0.5);
     while (FL.Value()||FR.Value()){
         move_forward(25,25);
     }
-    move_backward(25,205);
+    move_backward(25,220);
     Sleep(0.5);
     turn_right(25,450);
     Sleep(0.5);
      servo_arm(0);
      servo_lever(80);
+      servo_kick(10);
    
-    move_backward_ramp(25, 26,400);
- servo_arm(75);
+    move_backward_ramp(25, 26,545);
+ servo_arm(120);
+ Sleep(0.5);
+ servo_lever(140);
+ servo_arm(160);
+ servo_lever(80);
+ servo_arm(40);
+ move_forward(20, 30);
     
-    turn_right(25, 600);
-    move_forward(25,360);
-    servo_kick(180);
+    turn_right(25, 565);
+    move_forward(25,430);
+    servo_kick(130);
     
    
     
