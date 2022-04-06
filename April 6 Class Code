@@ -1,0 +1,899 @@
+
+#include <FEHLCD.h>
+#include <FEHServo.h>
+#include <FEHMotor.h>
+#include <FEHUtility.h>
+#include <FEHIO.h>
+#include <FEHRPS.h>
+
+#define red .46
+
+#define PULSE_TIME 0.1
+#define PULSE_POWER 25
+#define COUNTS_PER_INCH 40.5
+#define COUNTS_PER_DEGREE 2.48
+#define RPS_WAIT_TIME_IN_SEC 0.35
+#define POWER 35
+#define PLUS 0
+#define MINUS 1
+
+//Declare 2 igwan motors to motor ports
+FEHMotor left_motor(FEHMotor::Motor0,9.0);  
+FEHMotor right_motor(FEHMotor::Motor1,9.0);  
+DigitalEncoder right_encoder(FEHIO::P1_0);
+DigitalEncoder left_encoder(FEHIO::P1_1);
+
+//Declares the arm servos
+FEHServo kickServo(FEHServo::Servo7);
+FEHServo arm(FEHServo::Servo0);
+FEHServo lever(FEHServo::Servo1);
+
+//Declares bump switches
+DigitalInputPin FL(FEHIO::P3_0);
+DigitalInputPin FR(FEHIO::P0_0);
+
+//Function that calculates average voltage value of CDS cell 0-3.3 V
+float lightValue(){
+    //Declare input to cds cell
+AnalogInputPin cds(FEHIO::P2_0);
+int i=0;
+float sum=0;
+float a=0;
+float average=0;
+//Loop runs through 10 times to measure cds cell output
+while(i<10){
+    //Find value and add it to running sum
+     a= cds.Value();
+     sum=sum+a;
+     i++;
+     //Sleep 10 ms
+     Sleep(10);
+  
+
+
+}
+//calculate average value and return said value
+
+average=sum/10;
+return average;
+
+}
+
+void forward(){ 
+    
+   left_motor.SetPercent(-25);
+   right_motor.SetPercent(25);
+
+
+}
+void turnLeft(){ 
+    
+   left_motor.SetPercent(0);
+
+   right_motor.SetPercent(25);
+
+
+
+
+
+}
+
+void turnRight(){ 
+
+    
+
+   left_motor.SetPercent(-25);
+   right_motor.SetPercent(0);
+
+
+}
+void move_forward(int percent, int counts) //using encoders
+{
+    //Reset encoder counts
+    right_encoder.ResetCounts();
+    left_encoder.ResetCounts();
+
+    //Set both motors to desired percent
+    right_motor.SetPercent(percent);
+    left_motor.SetPercent(-(percent+3));
+
+    //While the average of the left and right encoder is less than counts,
+    //keep running motors
+    while((left_encoder.Counts() + right_encoder.Counts()) / 2. < counts);
+
+    //Turn off motors
+    right_motor.Stop();
+    left_motor.Stop();
+}
+void move_forward_ramp(int percent1, int percent2, int counts) //using encoders
+{
+    //Reset encoder counts
+    right_encoder.ResetCounts();
+    left_encoder.ResetCounts();
+
+    //Set both motors to desired percent
+    right_motor.SetPercent(percent1);
+    left_motor.SetPercent(-percent2);
+
+    //While the average of the left and right encoder is less than counts,
+    //keep running motors
+    while((left_encoder.Counts() + right_encoder.Counts()) / 2. < counts);
+
+    //Turn off motors
+    right_motor.Stop();
+    left_motor.Stop();
+}
+
+void move_backward(int percent, int counts) //using encoders
+{
+    //Reset encoder counts
+    right_encoder.ResetCounts();
+    left_encoder.ResetCounts();
+
+    //Set both motors to desired percent
+    right_motor.SetPercent(-percent-3);
+    left_motor.SetPercent(percent);
+
+    //While the average of the left and right encoder is less than counts,
+    //keep running motors
+    while((left_encoder.Counts() + right_encoder.Counts()) / 2. < counts);
+
+    //Turn off motors
+    right_motor.Stop();
+    left_motor.Stop();
+}
+void move_backward_ramp(int percent1, int percent2, int counts) //using encoders
+{
+    //Reset encoder counts
+    right_encoder.ResetCounts();
+    left_encoder.ResetCounts();
+
+    //Set both motors to desired percent
+    right_motor.SetPercent(-percent1);
+    left_motor.SetPercent(percent2);
+
+    //While the average of the left and right encoder is less than counts,
+    //keep running motors
+    while((left_encoder.Counts() + right_encoder.Counts()) / 2. < counts);
+
+    //Turn off motors
+    right_motor.Stop();
+    left_motor.Stop();
+}
+
+void pulse_forward(int percent, float seconds) 
+{
+    // Set both motors to desired percent
+    right_motor.SetPercent(percent);
+    left_motor.SetPercent(-percent);
+
+    // Wait for the correct number of seconds
+    Sleep(seconds);
+
+    // Turn off motors
+    right_motor.Stop();
+    left_motor.Stop();
+}
+void pulse_counterclockwise(int percent, float seconds) 
+{
+    // Set both motors to desired percent
+    right_motor.SetPercent(percent);
+    left_motor.SetPercent(percent);
+
+    // Wait for the correct number of seconds
+    Sleep(seconds);
+
+    // Turn off motors
+    right_motor.Stop();
+    left_motor.Stop();
+}
+
+void check_x(float x_coordinate)
+{
+    // Determine the direction of the motors based on the orientation of the QR code 
+    //int power = PULSE_POWER;
+    //if(orientation == MINUS){
+        //power = -PULSE_POWER;
+    //}
+
+    // Check if receiving proper RPS coordinates and whether the robot is within an acceptable range
+    while(RPS.X() >= 0 && (RPS.X() < x_coordinate - 1 || RPS.X() > x_coordinate + 1))
+    {
+        if (RPS.X() > x_coordinate + 1)
+        {
+            // Pulse the motors for a short duration in the correct direction
+            pulse_forward(POWER, PULSE_TIME);
+        }
+        else if(RPS.X() < x_coordinate - 1)
+        {
+            // Pulse the motors for a short duration in the correct direction
+            pulse_forward(-POWER, PULSE_TIME);
+        }
+        Sleep(RPS_WAIT_TIME_IN_SEC);
+    }
+}
+void check_y(float y_coordinate)
+{
+    // Determine the direction of the motors based on the orientation of the QR code
+    //int power = PULSE_POWER;
+    //if(orientation == MINUS){
+        //power = -PULSE_POWER;
+    //}
+
+    // Check if receiving proper RPS coordinates and whether the robot is within an acceptable range
+    while(RPS.Y() >= 0 && (RPS.Y() < y_coordinate - 1 || RPS.Y() > y_coordinate + 1))
+    {
+        if(RPS.Y() > y_coordinate + 1)
+        {
+            // Pulse the motors for a short duration in the correct direction
+            pulse_forward(POWER, PULSE_TIME);
+        }
+        else if(RPS.Y() < y_coordinate - 1)
+        {
+            // Pulse the motors for a short duration in the correct direction
+           pulse_forward(-POWER, PULSE_TIME);
+        }
+        Sleep(RPS_WAIT_TIME_IN_SEC);
+    }
+}
+void check_heading(float heading)
+{
+    //You will need to fill out this one yourself and take into account
+    //checking for proper RPS data and the edge conditions
+    //(when you want the robot to go to 0 degrees or close to 0 degrees)
+
+    /*
+        SUGGESTED ALGORITHM:
+        1. Check the current orientation of the QR code and the desired orientation of the QR code
+        2. Check if the robot is within the desired threshold for the heading based on the orientation
+        3. Pulse in the correct direction based on the orientation
+    */
+
+    int power = PULSE_POWER;
+
+    while (RPS.Heading() >= 0 && (RPS.Heading() < heading - 2 || RPS.Heading() > heading + 2))
+    {
+        if(RPS.Heading() > heading + 2)
+        {
+            // Pulse the motors for a short duration in the correct direction
+            pulse_counterclockwise(-power, PULSE_TIME);
+        }
+        else if(RPS.Heading() < heading - 2)
+        {
+            // Pulse the motors for a short duration in the correct direction
+           pulse_counterclockwise(power, PULSE_TIME);
+        }
+        Sleep(RPS_WAIT_TIME_IN_SEC);
+    }   
+}
+
+void turn_bothwheels_counter(int percent, int counts){
+    //Reset encoder counts
+    right_encoder.ResetCounts();
+    left_encoder.ResetCounts();
+
+    //Set both motors to desired percent
+    right_motor.SetPercent(percent);
+    left_motor.SetPercent((percent+3));
+
+    //While the average of the left and right encoder is less than counts,
+    //keep running motors
+    while((left_encoder.Counts() + right_encoder.Counts()) / 2. < counts);
+
+    //Turn off motors
+    right_motor.Stop();
+    left_motor.Stop();
+}
+
+void turn_left(int percent, int counts)
+{
+     //Reset encoder counts
+    right_encoder.ResetCounts();
+    left_encoder.ResetCounts();
+
+    //Set both motors to desired percent
+    right_motor.SetPercent(percent);
+    //While the average of the left and right encoder is less than counts,
+    //keep running motors
+    while(right_encoder.Counts() < counts);
+    //Turn off motors
+    right_motor.Stop();
+
+}
+void turn_left_backward(int percent, int counts)
+{
+     //Reset encoder counts
+    right_encoder.ResetCounts();
+    left_encoder.ResetCounts();
+
+    //Set both motors to desired percent
+    right_motor.SetPercent(-percent);
+    //While the average of the left and right encoder is less than counts,
+    //keep running motors
+    while(right_encoder.Counts() < counts);
+    //Turn off motors
+    right_motor.Stop();
+
+}
+void turn_right(int percent, int counts)
+{
+     //Reset encoder counts
+    right_encoder.ResetCounts();
+    left_encoder.ResetCounts();
+
+    //Set both motors to desired percent
+    left_motor.SetPercent(-percent);
+    //While the average of the left and right encoder is less than counts,
+    //keep running motors
+    while(left_encoder.Counts() < counts);
+
+    //Turn off motors
+    left_motor.Stop();
+
+}
+void turn_right_backward(int percent, int counts)
+{
+     //Reset encoder counts
+    right_encoder.ResetCounts();
+    left_encoder.ResetCounts();
+
+    //Set both motors to desired percent
+    left_motor.SetPercent(percent);
+    //While the average of the left and right encoder is less than counts,
+    //keep running motors
+    while(left_encoder.Counts() < counts);
+
+    //Turn off motors
+    left_motor.Stop();
+
+}
+
+void reverse_after_red(int percent)
+{
+     //Reset encoder counts
+    right_encoder.ResetCounts();
+    left_encoder.ResetCounts();
+
+    //Set both motors to desired percent
+    left_motor.SetPercent(percent);
+    right_motor.SetPercent(-percent);
+    //While the average of the left and right encoder is less than counts,
+    //keep running motors
+    while((left_encoder.Counts() + right_encoder.Counts())/2 < 200);
+
+    //Turn off motors
+    left_motor.Stop();
+    right_motor.Stop();
+
+    //Reset encoder counts
+    right_encoder.ResetCounts();
+    left_encoder.ResetCounts();
+
+    //Set both motors to desired percent
+    left_motor.SetPercent(-percent);
+    //While the average of the left and right encoder is less than counts,
+    //keep running motors
+    while(left_encoder.Counts() < 300);
+
+    //Turn off motors
+    left_motor.Stop();
+    right_encoder.ResetCounts();
+    left_encoder.ResetCounts();
+
+    //Set both motors to desired percent
+    left_motor.SetPercent(percent);
+    right_motor.SetPercent(-percent);
+    //While the average of the left and right encoder is less than counts,
+    //keep running motors
+    while((left_encoder.Counts() + right_encoder.Counts())/2 < 200);
+
+    //Turn off motors
+    left_motor.Stop();
+    right_motor.Stop();
+
+    //Reset encoder counts
+    right_encoder.ResetCounts();
+    left_encoder.ResetCounts();
+
+    //Set both motors to desired percent
+    left_motor.SetPercent(-percent);
+    //While the average of the left and right encoder is less than counts,
+    //keep running motors
+    while(left_encoder.Counts() < 195);
+
+    //Turn off motors
+    left_motor.Stop();
+
+}
+void reverse_after_blue(int percent)
+{
+     //Reset encoder counts
+    right_encoder.ResetCounts();
+    left_encoder.ResetCounts();
+
+    //Set both motors to desired percent
+    left_motor.SetPercent(percent);
+    right_motor.SetPercent(-percent);
+    //While the average of the left and right encoder is less than counts,
+    //keep running motors
+    while((left_encoder.Counts() + right_encoder.Counts())/2 < 200);
+
+    //Turn off motors
+    left_motor.Stop();
+    right_motor.Stop();
+
+    //Reset encoder counts
+    right_encoder.ResetCounts();
+    left_encoder.ResetCounts();
+
+    //Set both motors to desired percent
+    left_motor.SetPercent(-percent);
+    //While the average of the left and right encoder is less than counts,
+    //keep running motors
+    while(left_encoder.Counts() < 300);
+
+    //Turn off motors
+    left_motor.Stop();
+    right_encoder.ResetCounts();
+    left_encoder.ResetCounts();
+
+    //Set both motors to desired percent
+    left_motor.SetPercent(percent);
+    right_motor.SetPercent(-percent);
+    //While the average of the left and right encoder is less than counts,
+    //keep running motors
+    while((left_encoder.Counts() + right_encoder.Counts())/2 < 200);
+
+    //Turn off motors
+    left_motor.Stop();
+    right_motor.Stop();
+
+    //Reset encoder counts
+    right_encoder.ResetCounts();
+    left_encoder.ResetCounts();
+
+    //Set both motors to desired percent
+    left_motor.SetPercent(-percent);
+    //While the average of the left and right encoder is less than counts,
+    //keep running motors
+    while(left_encoder.Counts() < 180);
+
+    //Turn off motors
+    left_motor.Stop();
+
+}
+
+void move_toward_jukebox (int a, float x, float y){
+    move_forward(30,50);
+      
+    turn_left(30,40);
+      
+    move_forward_ramp(40, 43,720);
+    turn_left(30,276);
+      
+    float timebefore2 = TimeNow();
+    while (FL.Value()||FR.Value()){
+        float timeafter2 = TimeNow();
+        if (timeafter2 - timebefore2 > 6){
+            break;
+        }
+        move_forward(30,2);
+    }
+
+    move_backward(25,100);
+    check_x(x);
+    
+    turn_bothwheels_counter(25,220);
+    check_heading(174);
+      
+    check_y(y);
+    Sleep(0.5);
+    //move_backward_ramp(22, 24, 110);
+      
+}
+
+void servo_kick(float degree){
+    kickServo.SetMin(630);
+    kickServo.SetMax(2400);
+
+    kickServo.SetDegree(degree);
+
+      
+}
+
+void servo_arm(float degree){
+    arm.SetMin(800);
+    arm.SetMax(2314);
+
+    arm.SetDegree(degree);
+
+      
+}
+
+void servo_lever(float degree){
+    lever.SetMin(550);
+    lever.SetMax(2484);
+
+    lever.SetDegree(degree);
+
+      
+}
+
+
+void tray(float tray_x){
+    /*
+    move_forward(25, 700);
+      
+    turn_right(30, 240);
+      
+    move_backward(25,50);
+    Sleep(.5);
+    */
+    move_forward_ramp(50,55,850);
+      
+    turn_left(25,50);
+    move_forward_ramp(50,55,440);
+    //move_forward(25,250);
+      
+    turn_left(25,500);
+      
+    check_x(tray_x);
+    turn_left(25,545);
+    servo_kick(180);
+    servo_arm(90);
+    float timebefore = TimeNow();
+    while (FL.Value()||FR.Value()){
+        float timeafter = TimeNow();
+        if (timeafter - timebefore > 3){
+            break;
+        }
+        move_forward(30,2);
+    }
+    servo_kick(90);
+      
+}
+
+void reverse_tray(){
+    move_backward(25, 400);
+    turn_left(25, 560);
+
+    float timebefore = TimeNow();
+    while (FL.Value()||FR.Value()){
+        float timeafter = TimeNow();
+        if (timeafter - timebefore > 10){
+            break;
+        }
+        move_forward(30,2);
+    }
+    move_backward(25,220);
+      
+    turn_right(25,450);
+      
+    servo_arm(0);
+    servo_lever(90);
+    servo_kick(30);
+    move_backward_ramp(33, 33,585);
+    Sleep(0.5);
+
+    servo_arm(120);
+    Sleep(0.5);
+    
+    move_forward(40,60);
+    servo_lever(170);
+    servo_arm(20);
+
+    Sleep(0.5);
+    servo_arm(155);  
+    Sleep(0.5); 
+    servo_lever(90); 
+    Sleep(0.5); 
+    move_backward(40,50);
+    Sleep(0.5); 
+    servo_arm(30);
+
+    Sleep(0.5);
+    move_forward(20, 87);
+    servo_lever(160);
+    turn_right(25, 522);
+    servo_kick(0);
+    float timebefore2 = TimeNow();
+    while (FL.Value()||FR.Value()){
+        float timeafter2 = TimeNow();
+        if (timeafter2 - timebefore2 > 5){
+            break;
+        }
+        move_forward_ramp(25,27, 2);
+    }
+}
+
+void turn_ticket(){
+    move_backward(25,175);
+    turn_left(25,550); //535
+    servo_arm(9);
+    move_backward_ramp(30, 33, 680);
+    turn_right(30,300);
+    move_forward(20,50);
+    turn_left(30,350);
+    while (FL.Value()){
+        move_forward(25,5);
+    }
+}
+
+void burger(){
+    move_forward(25, 115);
+      
+    turn_left(25,50);
+      
+    move_forward(25, 560);
+      
+    turn_right(30, 220);
+      
+    move_backward(25,50);
+    Sleep(.5);
+    move_forward_ramp(40,45,1290);
+      
+    servo_arm(180);
+    servo_arm(90);
+      
+    turn_right(25,450);
+      
+    while (FL.Value()||FR.Value()){
+        move_forward(25,25);
+    }
+    move_backward(25,220);
+      
+    turn_right(25,450);
+      
+    servo_arm(0);
+    servo_lever(80);
+    servo_kick(30);
+   
+    move_backward_ramp(27, 29,555);
+    servo_arm(120);
+      
+    servo_lever(165);
+    servo_arm(140);
+    servo_lever(90);
+    servo_arm(20);
+    move_forward(20, 30);
+    turn_right(25, 565);
+    move_forward(25,430);
+    servo_kick(130);
+}
+
+void vanilla(){
+    turn_left(30, 1);
+    move_forward(25, 220);
+    servo_kick(115);
+    Sleep(0.5);
+}
+
+void swirl(){
+    turn_right(25, 105);
+    move_forward(25, 215);
+    servo_kick(115);
+    Sleep(0.5);
+}
+
+void chocolate(){
+    turn_right(25,265);
+    move_forward(30, 220);
+    servo_kick(115);
+    Sleep(0.5);
+}
+
+void icecream(){
+    move_backward_ramp(23,26,350);
+    turn_right(25,220);
+    move_backward_ramp(23,26,140);
+}
+
+void after_icecream(){
+    move_backward_ramp(23,26,80);
+    servo_kick(140);
+    Sleep(7.2);
+    move_forward_ramp(23,26,80);
+    servo_kick(85);
+}
+
+void endbutton_swirl(){
+    move_backward(30, 600);
+    turn_left(25, 315);
+    move_backward(30, 345);
+    turn_left(25,620);
+    move_forward_ramp(40, 44, 900);
+    turn_left(25, 270);
+    //move_forward_ramp(23,26, 600);
+}
+
+void endbutton_swirl_2(float x, float y){
+    move_backward(30, 500);
+    turn_bothwheels_counter(30, 50);
+    check_x(x);
+    turn_bothwheels_counter(30, 150);
+    check_heading(174);
+    move_forward_ramp(40, 44, 950);
+    turn_left(25, 270);
+}
+
+void endbutton_chocolate(){
+    move_backward(30, 600);
+    turn_left(25, 455);
+    move_backward(35, 560);
+    turn_left(35,620);
+    move_forward_ramp(40, 45, 900);
+    turn_left(35, 270);
+    //move_forward_ramp(23,26, 600);
+}
+
+void endbutton_vanilla(){
+    move_backward(30, 600);
+    turn_left(25, 235);
+    move_backward(35, 140);
+    turn_left(35,600);
+    move_forward_ramp(40, 45, 900);
+    turn_left(35, 270);
+    //move_forward_ramp(23,26, 600);
+}
+
+void ticket_after_ice(){
+    turn_left(30, 280);
+    float timebefore = TimeNow();
+    while (FL.Value()||FR.Value()){
+        float timeafter = TimeNow();
+        if (timeafter - timebefore > 8){
+            break;
+        }
+        move_forward(30,5);
+    }
+    move_backward(30, 170);
+    turn_right(30, 510);
+    servo_arm(170);
+    servo_lever(75);
+    move_backward_ramp(25,28,640);
+    turn_left(30,200);
+    servo_lever(160);
+    turn_right(30,200);
+    move_forward(30, 300);
+    turn_right(30,100);
+    move_forward(30, 50);
+    turn_left(30, 100);
+    move_forward(30,300);
+}
+
+int main(void)
+{
+
+    RPS.InitializeTouchMenu();
+
+    int go = 1;
+
+    /* conversion between inches traveled and number of transitions for shaft encoder:
+    n = (inches*318)/(2*pi*r)
+    (put the "n" value into the code)
+
+    446 counts to turn 90 degrees
+    */
+
+   float x_position, y_position;
+ 
+    while (!LCD.Touch(&x_position, &y_position)){
+        LCD.Clear();
+        LCD.WriteLine("Waiting for light position");
+        Sleep(0.1);
+    }
+
+    float light_x = RPS.X();
+    float light_y = RPS.Y();
+    Sleep(0.3);
+
+    while (!LCD.Touch(&x_position, &y_position)){
+        LCD.Clear();
+        LCD.WriteLine("Waiting for tray turn position");
+        Sleep(0.1);
+    }
+
+    float tray_x = RPS.X();
+    Sleep(0.3);
+
+    while (!LCD.Touch(&x_position, &y_position)){
+        LCD.Clear();
+        LCD.WriteLine("Waiting for down ramp position");
+        Sleep(0.1);
+    }
+
+    float down_x = RPS.X();
+    float down_y = RPS.Y();
+    Sleep(0.3);
+
+    while (!LCD.Touch(&x_position, &y_position)){
+        LCD.Clear();
+        LCD.WriteLine("Waiting for touch");
+        Sleep(0.1);
+    }
+    LCD.SetBackgroundColor(BLACK);
+
+    while (go == 4){
+        endbutton_swirl_2(down_x, down_y);
+    }
+
+    while (go == 3){
+        LCD.WriteLine(lightValue());
+        Sleep(0.1);
+    }
+
+    while (go == 2){
+
+        LCD.SetFontColor(RED);
+        LCD.WriteLine(RPS.X());
+        LCD.SetFontColor(BLUE);
+        LCD.WriteLine(RPS.Y());
+        Sleep(1.0);
+
+    }
+
+    while (go == 1){
+
+        float a = lightValue();
+        LCD.WriteLine(a);
+        
+        int starttime = 0;
+        starttime++;
+
+        if (a<=red || starttime > 200){
+            move_toward_jukebox(a, light_x, light_y);
+            a = lightValue();
+            LCD.WriteLine(a);
+            turn_right(25,5);
+            move_forward_ramp(33,36,240);
+            if(a>=.150&&a<=.360){
+                LCD.WriteLine("Red");
+                turn_left(25,42);
+                 
+                move_forward(35,105);
+                  
+                reverse_after_red(25);
+                move_backward_ramp(35,38,30);
+            }
+            else if (a>=.390&&a<=.860){
+                LCD.WriteLine("Blue");
+                turn_right(25,18);
+                move_forward(35,105);
+                  
+                reverse_after_blue(25);
+            }else{
+                LCD.WriteLine("No Light");
+                  
+                move_forward(35,120);
+                  
+                reverse_after_blue(25);
+            }
+            move_backward_ramp(35,38,515);
+            turn_right(30,530);
+            tray(tray_x);
+            reverse_tray();
+            //turn_ticket();
+            //burger();
+            icecream();
+            
+            if (RPS.GetIceCream() == 0){
+                vanilla();
+                after_icecream();
+                endbutton_vanilla();
+            }else if (RPS.GetIceCream() == 2){
+                chocolate();
+                after_icecream();
+                endbutton_chocolate();
+            }else{
+                swirl();
+                after_icecream();
+                endbutton_swirl_2(down_x, down_y);
+            }
+
+            ticket_after_ice();
+
+           go = 10;
+        }
+        Sleep(0.1);
+    }
+}
