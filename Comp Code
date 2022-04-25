@@ -402,7 +402,7 @@ void reverse_after_red(int percent)
     // keep running motors
     while((left_encoder.Counts() + right_encoder.Counts())/2 < 200);
 
-    //Turn off motors
+    // Turn off motors
     left_motor.Stop();
     right_motor.Stop();
 
@@ -417,7 +417,7 @@ void reverse_after_red(int percent)
     // keep running motors
     while(left_encoder.Counts() < 195);
 
-    //Turn off motors
+    // Turn off motors
     left_motor.Stop();
 }
 
@@ -513,7 +513,7 @@ void move_toward_jukebox(int a, float x, float y)
     move_forward(30, 30);
     check_y(y);
     Sleep(0.5);
-    //move_backward_ramp(22, 24, 110);
+    // move_backward_ramp(22, 24, 110);
 }
 
 void servo_kick(float degree)
@@ -544,12 +544,14 @@ void servo_lever(float degree)
 void tray(float tray_x, float tray_y)
 {
     /*
+    
     move_forward(25, 700);
       
     turn_right(30, 240);
       
     move_backward(25, 50);
     Sleep(.5);
+    
     */
 
     servo_arm(120);
